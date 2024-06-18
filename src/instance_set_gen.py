@@ -23,7 +23,7 @@ n_instance = 100
 # instanceフォルダ作成
 now = datetime.datetime.now()
 datename = now.strftime('%Y-%m%d-%H%M-%S')
-path = "..data/instance_set_{0}".format(datename)
+path = "../data/instance_set_{0}".format(datename)
 folder_name = pathlib.Path(path) #Pathlibオブジェクトの生成
 os.makedirs(str(folder_name))
 
