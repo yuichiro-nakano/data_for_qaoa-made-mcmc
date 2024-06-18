@@ -153,7 +153,7 @@ def main():
                 uni_P[i,i] = 1 - np.sum(uni_P[:,i])
                 ssf_P[i,i] = 1 - np.sum(ssf_P[:,i])
 
-            gap_data[l,:,k] = np.array([mcmc.spectral_gap(qaoa_opt_made_P), mcmc.spectral_gap(qaoa_fix_made_Q), mcmc.spectral_gap(uni_P), mcmc.spectral_gap(ssf_P)]).T
+            gap_data[l,:,k] = np.array([mcmc.spectral_gap(qaoa_opt_made_P), mcmc.spectral_gap(qaoa_fix_made_P), mcmc.spectral_gap(uni_P), mcmc.spectral_gap(ssf_P)]).T
             
         l += 1
     
@@ -181,7 +181,7 @@ if __name__ == '__main__':
     
     # instance
     source_dir_name = '../data/instance_set_2024-0614-1705-31'
-    n_spin = 7
+    n_spin = 3
     beta_list = [1e-1, 1e0, 2e0, 5e0, 1e1]
     
     # QAOA
