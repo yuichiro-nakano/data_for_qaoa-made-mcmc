@@ -8,7 +8,7 @@ import math
 import sys
 import pathlib
 import pickle
-import glob
+import logging
 from qulacs import ParametricQuantumCircuit, QuantumState, Observable, QuantumCircuit, PauliOperator, GeneralQuantumOperator
 from qulacs.state import inner_product
 import torch
@@ -30,6 +30,12 @@ def main():
     start_time = time.time()
     now = datetime.datetime.now()
     datename = now.strftime('%Y-%m%d-%H%M-%S')
+    
+    logging.basicConfig(level=logging.DEBUG,
+                        format="%(message)s",
+                        datafmt="[%X]",
+                        handlers=[logging.FileHandler(filename="../log/{0}_log.txt".format(datename))])
+    logger = logging.getLogger(__name__)
     
     # import instance sets
     fname_in = pathlib.Path(source_dir_name).joinpath('{0}_sites_instance_set.pickle'.format(n_spin))
