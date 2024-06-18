@@ -122,10 +122,10 @@ def run_epoch(model, split, dataset, opt, upto=None):
 
 def run_train(model, train_data, test_data, n_epochs, opt, scheduler=None):
     for epoch in range(n_epochs):
-        if scheduler:
-            scheduler.step(epoch)
         run_epoch(model, 'test', test_data, opt)
         run_epoch(model, 'train', train_data, opt)
+        if scheduler:
+            scheduler.step()
         
     run_epoch(model, 'test', test_data, opt)
 

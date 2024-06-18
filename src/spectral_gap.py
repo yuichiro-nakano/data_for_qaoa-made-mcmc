@@ -24,6 +24,7 @@ import lib.ising_model as ising
 from lib.ising_model import Ising_model
 import lib.QAOA_function as qaoa
 from lib.QAOA_function import QAOA_ansatz
+sys.modules['ising_model'] = ising # specify my module to load pickles of the instance set
 
 
 def main():
@@ -180,8 +181,8 @@ if __name__ == '__main__':
     
     # instance
     source_dir_name = '../data/instance_set_2024-0614-1705-31'
-    n_spin = 3
-    beta_list = [1e-1, 1e0, 2e1, 5e1, 1e2]
+    n_spin = 7
+    beta_list = [1e-1, 1e0, 2e0, 5e0, 1e1]
     
     # QAOA
     n_layers = 5

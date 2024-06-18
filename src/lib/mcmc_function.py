@@ -133,8 +133,11 @@ def calc_boltzmann_mh_acceptance(energy_vector, proposal_mat, beta):
 	energy_i = np.tile(energy_vector, (n_state,1))
 	energy_j = energy_i.T
 	reverse_proposal_mat = proposal_mat.T
-	
-	likelihood = -1.0 * beta * (energy_j - energy_i) + np.log(reverse_proposal_mat) - np.log(proposal_mat)
+
+	proposal_diff = np.log(reverse_proposal_mat) - np.log(proposal_mat)
+	proposal_diff_ex = np.where(np.isnan(proposal_diff)==True, 0.0, proposal_diff) # exception handling when Q=Q'=0
+
+	likelihood = -1.0 * beta * (energy_j - energy_i) + proposal_diff_ex
 	likelihood = np.exp(likelihood)
 	
 	ones_mat = np.ones((n_state, n_state))
