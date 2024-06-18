@@ -33,7 +33,7 @@ def main():
     
     logging.basicConfig(level=logging.DEBUG,
                         format="%(message)s",
-                        datafmt="[%X]",
+                        datefmt="[%X]",
                         handlers=[logging.FileHandler(filename="../log/{0}_log.txt".format(datename))])
     logger = logging.getLogger(__name__)
     
