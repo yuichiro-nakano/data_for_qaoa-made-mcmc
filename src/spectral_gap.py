@@ -1,6 +1,7 @@
 import numpy as np
 import scipy
 import networkx as nx
+import time
 import datetime
 import os
 import math
@@ -26,6 +27,10 @@ from lib.QAOA_function import QAOA_ansatz
 
 
 def main():
+    start_time = time.time()
+    now = datetime.datetime.now()
+    datename = now.strftime('%Y-%m%d-%H%M-%S')
+    
     # import instance sets
     fname_in = pathlib.Path(source_dir_name).joinpath('{0}_sites_instance_set.pickle'.format(n_spin))
     with open(str(fname_in), 'rb') as f:
@@ -144,7 +149,9 @@ def main():
             gap_data[l,:,k] = np.array([mcmc.spectral_gap(qaoa_opt_made_P), mcmc.spectral_gap(qaoa_fix_made_Q), mcmc.spectral_gap(uni_P), mcmc.spectral_gap(ssf_P)]).T
             
         l += 1
-     
+    
+    calc_time = time.time() - start_time
+    
     # export results
     sub_folder_name = "{0}_sites".format(n_spin)
     sub_folder_path = pathlib.Path(result_dir_name).joinpath(sub_folder_name)
@@ -154,6 +161,11 @@ def main():
     for l in range(len(beta_list)):
         fname_out = pathlib.Path(result_dir_name).joinpath(sub_folder_name, 'beta_{0}.npy'.format('{:.0e}'.format(beta_list[l])))
         np.save(str(fname_out), gap_data[l])
+        
+    path_config = sub_folder_path.joinpath(datename+'_runtime.txt')
+    with open(str(path_config), mode='w') as f:
+        f.write("beta : {0}\n".format(beta_list))
+        f.write("calculation time [s] : {0}\n".format(calc_time))
         
 if __name__ == '__main__':
     # seed
