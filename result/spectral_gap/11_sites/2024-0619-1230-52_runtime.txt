@@ -1,0 +1,2 @@
+beta : [5.0]
+calculation time [s] : 2966.0431668758392
