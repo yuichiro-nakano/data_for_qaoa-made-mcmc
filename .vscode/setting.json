@@ -1,0 +1,8 @@
+{
+	"terminal.integrated.env.windows": {
+	  "PYTHONPATH": "${workspaceFolder}\\src\\lib"
+	},
+	"terminal.integrated.env.osx": {
+	  "PYTHONPATH": "${workspaceFolder}/src/lib"
+	}
+}
