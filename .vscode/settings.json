@@ -4,5 +4,7 @@
 	},
 	"terminal.integrated.env.osx": {
 	  "PYTHONPATH": "${workspaceFolder}/src/lib"
-	}
+	},
+	
+	"jupyter.notebookFileRoot": "${workspaceFolder}"
 }
