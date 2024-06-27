@@ -174,7 +174,7 @@ def binary_to_number(binary_list):
     
     bin_str = "0b"
     for i in range(binary_list.shape[0]):
-        bin_str += str(binary_list[i])
+        bin_str += str(int(binary_list[i]))
         
     bin_number = int(bin_str, 0)
     
