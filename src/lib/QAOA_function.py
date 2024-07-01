@@ -5,7 +5,7 @@ os.environ["OMP_NUM_THREADS"] = "8"
 from qulacs import QuantumState, Observable, QuantumCircuit, ParametricQuantumCircuit
 from qulacs.state import inner_product
 import numpy as np
-import lib.ising_model as ising
+import ising_model as ising
 
 # ansatz
 class QAOA_ansatz:
@@ -174,7 +174,7 @@ def binary_to_number(binary_list):
     
     bin_str = "0b"
     for i in range(binary_list.shape[0]):
-        bin_str += str(binary_list[i])
+        bin_str += str(int(binary_list[i]))
         
     bin_number = int(bin_str, 0)
     

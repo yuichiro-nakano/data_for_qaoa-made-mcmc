@@ -4,7 +4,7 @@ os.environ["OMP_NUM_THREADS"] = "8"
 
 import numpy as np
 import scipy
-import lib.ising_model as ising
+import ising_model as ising
 
 # spin
 def spin_to_number(spin):
@@ -40,55 +40,57 @@ def spin_measurement(state):
 
 
 # metropolis-hastings
-def boltzmann_metropolis(spin, proposal_spin, instance, beta, seed=None):
-    rng = np.random.default_rng(seed)
+def boltzmann_metropolis(spin, proposal_spin, instance, beta, rng=None):
+	if rng == None:
+		rng = np.random.default_rng()
+
+	energy_diff = -1.0 * beta * (ising.spin_energy(proposal_spin,instance) - ising.spin_energy(spin,instance))
+
+	# avoid overflowing value of np.exp()
+	if energy_diff > 500:
+		acceptance = 1.0
+	elif energy_diff < -500:
+		acceptance = 0.0
+	else:
+		acceptance = float(min(1, np.exp(energy_diff)))
+
+	# accept/reject propose
+	if acceptance >= rng.uniform(0,1):
+		count = 1
+		return proposal_spin, acceptance, count
+	else:
+		count = 0
+		return spin, acceptance, count
     
-    energy_diff = -1.0 * beta * (ising.spin_energy(proposal_spin,instance) - ising.spin_energy(spin,instance))
+def boltzmann_metropolis_hastings(spin, proposal_spin, proposal_mat, instance, beta, rng=None):
+	if rng == None:
+		rng = np.random.default_rng()
+     
+	i = spin_to_number(spin)
+	j = spin_to_number(proposal_spin)
     
-    # avoid overflowing value of np.exp()
-    if energy_diff > 500:
-        acceptance = 1.0
-    elif energy_diff < -500:
-        acceptance = 0.0
-    else:
-        acceptance = float(min(1, np.exp(energy_diff)))
+	energy_diff = -1.0 * beta * (ising.spin_energy(proposal_spin,instance) - ising.spin_energy(spin,instance))
     
-    # accept/reject propose
-    if acceptance >= rng.uniform(0,1):
-        count = 1
-        return proposal_spin, acceptance, count
-    else:
-        count = 0
-        return spin, acceptance, count
+	# avoid dividing zero when Q(i->j)=0
+	if proposal_mat[j,i] < 1e-15:
+		acceptance = 1.0
     
-def boltzmann_metropolis_hastings(spin, proposal_spin, proposal_mat, instance, beta, seed=None):
-    rng = np.random.default_rng(seed)
+	# avoid overflowing an imput of np.exp()
+	if energy_diff > 500:
+		acceptance = 1.0
+	elif energy_diff < -500:
+		acceptance = 0.0
+	else:
+		diff = np.exp(energy_diff) * proposal_mat[i,j] / proposal_mat[j,i]
+		acceptance = np.minimum(1, diff) 
     
-    i = spin_to_number(spin)
-    j = spin_to_number(proposal_spin)
-    
-    energy_diff = -1.0 * beta * (ising.spin_energy(proposal_spin,instance) - ising.spin_energy(spin,instance))
-    
-    # avoid dividing zero when Q(i->j)=0
-    if proposal_mat[j,i] < 1e-15:
-        acceptance = 1.0
-    
-    # avoid overflowing an imput of np.exp()
-    if energy_diff > 500:
-        acceptance = 1.0
-    elif energy_diff < -500:
-        acceptance = 0.0
-    else:
-        diff = np.exp(energy_diff) * proposal_mat[i,j] / proposal_mat[j,i]
-        acceptance = np.minimum(1, diff) 
-    
-    # accept/reject propose
-    if acceptance >= rng.uniform(0,1):
-        count = 1
-        return proposal_spin, acceptance, count
-    else:
-        count = 0
-        return spin, acceptance, count
+	# accept/reject propose
+	if acceptance >= rng.uniform(0,1):
+		count = 1
+		return proposal_spin, acceptance, count
+	else:
+		count = 0
+		return spin, acceptance, count
 
 
 # proposal
@@ -103,26 +105,30 @@ def single_spin_flip(spin, flip_index):
     return proposal_spin
 
 # mcmc 
-def ssf_update(spin, instance, beta, seed):
-    rng = np.random.default_rng(seed)
-    n_spin = spin.shape[0]
+def ssf_update(spin, instance, beta, rng=None):
+	if rng == None:
+		rng = np.random.default_rng()
     
-    # make a porposal
-    flip_index = rng.integers(0, n_spin)
-    proposal_spin = single_spin_flip(spin, flip_index)
+	n_spin = spin.shape[0]
+
+	# make a porposal
+	flip_index = rng.integers(0, n_spin)
+	proposal_spin = single_spin_flip(spin, flip_index)
+
+	# accept or reject the proposal
+	return boltzmann_metropolis(spin, proposal_spin, instance, beta, rng)
     
-    # accept or reject the proposal
-    return boltzmann_metropolis(spin, proposal_spin, instance, beta, seed)
-    
-def uniform_update(spin, instance, beta, seed):
-    rng = np.random.default_rng(seed)
-    n_spin = spin.shape[0]
-    
-    # make a porposal
-    proposal_spin = number_to_spin(rng.integers(0, n_spin), n_spin)
-    
-    # accept or reject the proposal
-    return boltzmann_metropolis(spin, proposal_spin, instance, beta, seed)
+def uniform_update(spin, instance, beta, rng=None):
+	if rng == None:
+		rng = np.random.default_rng()
+
+	n_spin = spin.shape[0]
+
+	# make a porposal
+	proposal_spin = number_to_spin(rng.integers(0, n_spin), n_spin)
+
+	# accept or reject the proposal
+	return boltzmann_metropolis(spin, proposal_spin, instance, beta, rng)
 
 
 # utils

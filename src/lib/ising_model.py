@@ -11,101 +11,100 @@ import sys
 
 # model
 class Ising_model:
-    def __init__(self, n_qubits, seed=None, **kwargs):
-        rng = np.random.default_rng(seed)
-        self.n_qubits = n_qubits
-        
-        # random parameter (J,hが与えられていない場合)
-        if 'type' in kwargs:
-            if kwargs['type'] == '1D':
-                J, index_list = self.generate_1D_spin_glass()
-                h = np.array([rng.standard_normal() for i in range(self.n_qubits)])
-                
-            elif kwargs['type'] == '2D':
-                J, index_list = self.generate_2D_spin_glass()
-                h = np.array([rng.standard_normal() for i in range(self.n_qubits)])
-                
-            elif kwargs['type'] == 'SK':
-                J, index_list = self.generate_2D_spin_glass()
-                J /= np.sqrt(self.n_qubits)
-                h = np.zeros(self.n_qubits)
-                
-            else:
-                print("\"{0}\" is not defined.".format(kwargs['type']))
-                sys.exit()
-        
-        # fixed parameter (J,hが与えられている場合)
-        else:
-            if 'ListOfInt' not in kwargs:
-                print("please enter the type of model.")
-                sys.exit()
-                
-            else:
-                index_list = kwargs['ListOfInt']
-                
-                if 'ListOfJ' not in kwargs:
-                    J = np.zeros((self.n_qubits, self.n_qubits))
-                    for i,j in index_list:
-                            J[i,j] = rng.standard_normal()
-                else:
-                    J = kwargs['ListOfJ']
-                            
-                if 'ListOfh' not in kwargs:
-                    h = np.array([rng.standard_normal() for i in range(self.n_qubits)])
-                else:
-                    h = kwargs['ListOfh']
-        
-        self.J = J
-        self.J_index_list = index_list
-        self.h = h
-        
-                
-    def get_parameter(self):
-        return self.J, self.J_index_list, self.h
-    
-    def get_qubit_count(self):
-        return self.n_qubits
-    
-    def get_hamiltonian(self):
-        hamiltonian = Observable(self.n_qubits)
-    
-        # Z-term
-        for i in range(self.n_qubits):
-            hamiltonian.add_operator(self.h[i], "Z {0}".format(i))
+	def __init__(self, n_qubits, rng=None, **kwargs):
+		if rng == None:
+			rng = np.random.default_rng()
 
-        # ZZ-term
-        for i,j in self.J_index_list:
-            hamiltonian.add_operator(self.J[i,j], "Z {0} Z {1}".format(i, j))
+		self.n_qubits = n_qubits
+		self.rng = rng
+
+		# random parameter (J,hが与えられていない場合)
+		if 'type' in kwargs:
+			if kwargs['type'] == '1D':
+				J, index_list = self.generate_1D_spin_glass()
+				h = np.array([rng.standard_normal() for i in range(self.n_qubits)])
+
+			elif kwargs['type'] == '2D':
+				J, index_list = self.generate_2D_spin_glass()
+				h = np.array([rng.standard_normal() for i in range(self.n_qubits)])
+
+			elif kwargs['type'] == 'SK':
+				J, index_list = self.generate_2D_spin_glass()
+				J /= np.sqrt(self.n_qubits)
+				h = np.zeros(self.n_qubits)
+
+			else:
+				print("\"{0}\" is not defined.".format(kwargs['type']))
+				sys.exit()
+
+		# fixed parameter (J,hが与えられている場合)
+		else:
+			if 'ListOfInt' not in kwargs:
+				print("please enter the type of model.")
+				sys.exit()
+	
+			else:
+				index_list = kwargs['ListOfInt']
+
+				if 'ListOfJ' not in kwargs:
+					J = np.zeros((self.n_qubits, self.n_qubits))
+					for i,j in index_list:
+						J[i,j] = rng.standard_normal()
+				else:
+					J = kwargs['ListOfJ']
+
+				if 'ListOfh' not in kwargs:
+					h = np.array([rng.standard_normal() for i in range(self.n_qubits)])
+				else:
+					h = kwargs['ListOfh']
+
+		self.J = J
+		self.J_index_list = index_list
+		self.h = h
+        
+                
+	def get_parameter(self):
+		return self.J, self.J_index_list, self.h
+    
+	def get_qubit_count(self):
+		return self.n_qubits
+    
+	def get_hamiltonian(self):
+		hamiltonian = Observable(self.n_qubits)
+    
+		# Z-term
+		for i in range(self.n_qubits):
+			hamiltonian.add_operator(self.h[i], "Z {0}".format(i))
+
+		# ZZ-term
+		for i,j in self.J_index_list:
+			hamiltonian.add_operator(self.J[i,j], "Z {0} Z {1}".format(i, j))
             
-        return hamiltonian  
+		return hamiltonian  
         
         
-    def generate_1D_spin_glass(self):
-        rng = np.random.default_rng()
-    
-        J = np.zeros((self.n_qubits, self.n_qubits))
-        index_list = []
-        
-        for i in range(self.n_qubits-1):
-            J[i,i+1] = rng.standard_normal()
-            index_list.append([i,i+1])
-    
-        return J, index_list
+	def generate_1D_spin_glass(self):
+		J = np.zeros((self.n_qubits, self.n_qubits))
+		index_list = []
+
+		for i in range(self.n_qubits-1):
+			J[i,i+1] = self.rng.standard_normal()
+			index_list.append([i,i+1])
+
+		return J, index_list
     
     
-    def generate_2D_spin_glass(self):
-        rng = np.random.default_rng()
-        
-        J = np.zeros((self.n_qubits, self.n_qubits))
-        index_list = []
-        
-        for i in range(self.n_qubits):
-            for j in range(self.n_qubits):
-                if i < j:
-                    J[i,j] = rng.standard_normal()
-                    index_list.append([i,j])
-        
-        return J, index_list
+	def generate_2D_spin_glass(self):
+		J = np.zeros((self.n_qubits, self.n_qubits))
+		index_list = []
+
+		for i in range(self.n_qubits):
+			for j in range(self.n_qubits):
+				if i < j:
+					J[i,j] = self.rng.standard_normal()
+					index_list.append([i,j])
+
+		return J, index_list
 
 
 # util
