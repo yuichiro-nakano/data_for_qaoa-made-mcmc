@@ -107,16 +107,16 @@ def main():
 			qaoa_fix_pred_dist = made.sampling_MADE(model_qaoa_fix)
             
 			# optimize QAOA-MC
-			qaoa_mc_ansatz = qaoa_mc.QAOA_circuit(n_spin, instance, n_layers)
+			qaoa_mc_ansatz = qaoa_mc.QAOA_circuit(n_spin, instance, 2*n_layers)
 
 			def qaoa_mc_cost(para):
-				para2 = [para for i in range(qaoa_mc_ansatz.get_parameter_count())]
+				para2 = [para for i in range(2*qaoa_mc_ansatz.get_parameter_count())]
 				qaoa_mc_ansatz.set_parameter(para2)
 				return qaoa_mc.cost_function(qaoa_mc_ansatz, instance, beta, mode='exact')
 
 			qaoa_mc_init_para = 0.01
 			qaoa_mc_opt = scipy.optimize.minimize(qaoa_mc_cost, qaoa_mc_init_para, method=qaoa_mc_method, bounds=((0.0, 0.3),), options=qaoa_mc_options)
-			qaoa_mc_opt_para = [qaoa_mc_opt.x for i in range(qaoa_mc_ansatz.get_parameter_count())]
+			qaoa_mc_opt_para = [qaoa_mc_opt.x for i in range(2*qaoa_mc_ansatz.get_parameter_count())]
 			qaoa_mc_ansatz.set_parameter(qaoa_mc_opt_para)
 
             # get proposal matrix
@@ -208,14 +208,14 @@ if __name__ == '__main__':
     
     # instance
     source_dir_name = '../data/instance_set_2024-0614-1705-31'
-    n_spin = 7
+    n_spin = 3
     #beta_list = [1e1]
     beta_list = [1e-1, 1e0, 2e0, 5e0, 1e1]
     
     # QAOA
-    n_layers = 6
-    #qaoa_init_para = [0.2705, -0.5899, 0.4803, -0.4492, 0.5074, -0.3559, 0.5646, -0.2643, 0.6397, -0.1291] #文献におけるSKmodelに対するQAOA(p=5)の固定角
-    qaoa_init_para = [0.2528, 0.6004, 0.4531, 0.4670, 0.4750, 0.3880, 0.5146, 0.3176, 0.5650, 0.2325, 0.6392, 0.1291] #文献におけるSKmodelに対するQAOA(p=6)の固定角
+    n_layers = 5
+    qaoa_init_para = [0.2705, -0.5899, 0.4803, -0.4492, 0.5074, -0.3559, 0.5646, -0.2643, 0.6397, -0.1291] #文献におけるSKmodelに対するQAOA(p=5)の固定角
+    #qaoa_init_para = [0.2528, 0.6004, 0.4531, 0.4670, 0.4750, 0.3880, 0.5146, 0.3176, 0.5650, 0.2325, 0.6392, 0.1291] #文献におけるSKmodelに対するQAOA(p=6)の固定角
     qaoa_method = "BFGS"
     qaoa_options = {"disp": False, "maxiter": 200, "gtol": 1e-6}
     
