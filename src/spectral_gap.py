@@ -110,13 +110,13 @@ def main():
 			qaoa_mc_ansatz = qaoa_mc.QAOA_circuit(n_spin, instance, 2*n_layers)
 
 			def qaoa_mc_cost(para):
-				para2 = [para for i in range(2*qaoa_mc_ansatz.get_parameter_count())]
+				para2 = [para for i in range(qaoa_mc_ansatz.get_parameter_count())]
 				qaoa_mc_ansatz.set_parameter(para2)
 				return qaoa_mc.cost_function(qaoa_mc_ansatz, instance, beta, mode='exact')
 
 			qaoa_mc_init_para = 0.01
 			qaoa_mc_opt = scipy.optimize.minimize(qaoa_mc_cost, qaoa_mc_init_para, method=qaoa_mc_method, bounds=((0.0, 0.3),), options=qaoa_mc_options)
-			qaoa_mc_opt_para = [qaoa_mc_opt.x for i in range(2*qaoa_mc_ansatz.get_parameter_count())]
+			qaoa_mc_opt_para = [qaoa_mc_opt.x for i in range(qaoa_mc_ansatz.get_parameter_count())]
 			qaoa_mc_ansatz.set_parameter(qaoa_mc_opt_para)
 
             # get proposal matrix
@@ -208,7 +208,7 @@ if __name__ == '__main__':
     
     # instance
     source_dir_name = '../data/instance_set_2024-0614-1705-31'
-    n_spin = 5
+    n_spin = 9
     #beta_list = [1e1]
     beta_list = [1e-1, 1e0, 2e0, 5e0, 1e1]
     
