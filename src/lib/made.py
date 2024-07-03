@@ -4,7 +4,7 @@ Re-implementation by Andrej Karpathy based on https://arxiv.org/abs/1502.03509
 """
 
 import numpy as np
-
+import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -25,7 +25,7 @@ class MaskedLinear(nn.Linear):
         return F.linear(input, self.mask * self.weight, self.bias)
 
 class MADE(nn.Module):
-    def __init__(self, nin, hidden_sizes, nout, num_masks=1, natural_ordering=False):
+    def __init__(self, nin, hidden_sizes, nout, num_masks=1, natural_ordering=False, seed=0):
         """
         nin: integer; number of inputs
         hidden sizes: a list of integers; number of units in hidden layers
@@ -59,7 +59,7 @@ class MADE(nn.Module):
         # seeds for orders/connectivities of the model ensemble
         self.natural_ordering = natural_ordering
         self.num_masks = num_masks
-        self.seed = 0 # for cycling through num_masks orderings
+        self.seed = seed # for cycling through num_masks orderings
         
         self.m = {}
         self.update_masks() # builds the initial self.m connectivity
@@ -98,36 +98,49 @@ class MADE(nn.Module):
         return self.net(x)
     
 # training function
-def run_epoch(model, split, dataset, opt, upto=None):
-    torch.set_grad_enabled(split=='train') # enable/disable grad for efficiency of forwarding test batches
-    
-    model.train() if split == 'train' else model.eval()
-    x = dataset
-    for i, xb in enumerate(x):
-        # get the logits, potentially run the same batch a number of times, resampling each time
-        xbhat = torch.zeros_like(xb)
-        model.update_masks()
-        
-        # forward the model
-        xbhat += model(xb)
-        
-        # evaluate the binary cross entropy loss
-        loss = F.binary_cross_entropy(xbhat, xb)
-        
-        # backward/update
-        if split == 'train':
-            opt.zero_grad()
-            loss.backward()
-            opt.step()
+def set_seed(seed):
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
-def run_train(model, train_data, test_data, n_epochs, opt, scheduler=None):
-    for epoch in range(n_epochs):
-        run_epoch(model, 'test', test_data, opt)
-        run_epoch(model, 'train', train_data, opt)
-        if scheduler:
-            scheduler.step()
-        
-    run_epoch(model, 'test', test_data, opt)
+def run_epoch(model, split, dataset, opt, seed=None):
+	if seed != None:
+		set_seed(seed)
+    
+	torch.set_grad_enabled(split=='train') # enable/disable grad for efficiency of forwarding test batches
+
+	model.train() if split == 'train' else model.eval()
+	x = dataset
+	for i, xb in enumerate(x):
+		# get the logits, potentially run the same batch a number of times, resampling each time
+		xbhat = torch.zeros_like(xb)
+		model.update_masks()
+
+		# forward the model
+		xbhat += model(xb)
+
+		# evaluate the binary cross entropy loss
+		loss = F.binary_cross_entropy(xbhat, xb)
+
+		# backward/update
+		if split == 'train':
+			opt.zero_grad()
+			loss.backward()
+			opt.step()
+
+def run_train(model, train_data, test_data, n_epochs, opt, scheduler=None, seed=None):
+	if seed != None:
+		set_seed(seed)
+
+	for epoch in range(n_epochs):
+		run_epoch(model, 'test', test_data, opt)
+		run_epoch(model, 'train', train_data, opt)
+		if scheduler:
+			scheduler.step()
+	
+	run_epoch(model, 'test', test_data, opt)
 
 # sampling
 def sampling_MADE(model):

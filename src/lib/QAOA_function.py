@@ -112,22 +112,25 @@ def cost_QAOA(prob_hamiltonian, ansatz, para):
     
     return cost_val
 
-def sampling_QAOA(ansatz, para, n_samples):
-    n_qubits = ansatz.get_qubit_count()
-    state = QuantumState(n_qubits)
+def sampling_QAOA(ansatz, para, n_samples, rand_seed=None):
+	n_qubits = ansatz.get_qubit_count()
+	state = QuantumState(n_qubits)
+
+	# prepare an initial state
+	state = QuantumState(n_qubits)
+	pre_circuit = QuantumCircuit(n_qubits)
+	for i in range(n_qubits):
+		pre_circuit.add_H_gate(i)
+	pre_circuit.update_quantum_state(state)
+
+	# apply QAOA ansatz
+	ansatz.set_parameter(para)
+	ansatz.update_quantum_state(state)
     
-    # prepare an initial state
-    state = QuantumState(n_qubits)
-    pre_circuit = QuantumCircuit(n_qubits)
-    for i in range(n_qubits):
-        pre_circuit.add_H_gate(i)
-    pre_circuit.update_quantum_state(state)
-    
-    # apply QAOA ansatz
-    ansatz.set_parameter(para)
-    ansatz.update_quantum_state(state)
-    
-    return state.sampling(n_samples)
+	if rand_seed == None:
+		return state.sampling(n_samples)
+	else:
+		return state.sampling(n_samples, rand_seed)
 
 def distribution_QAOA(ansatz, para):
     n_qubits = ansatz.get_qubit_count()
