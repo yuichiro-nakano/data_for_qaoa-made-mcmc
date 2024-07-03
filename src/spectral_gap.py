@@ -4,7 +4,7 @@ import networkx as nx
 import time
 import datetime
 import os
-import math
+import random
 import sys
 import pathlib
 import pickle
@@ -80,9 +80,9 @@ def main():
 			qaoa_fix_data_nd = np.array([qaoa.number_to_binary(qaoa_fix_data_idx[i], n_spin) for i in range(len(qaoa_fix_data_idx))], dtype='float32')
 
 			qaoa_opt_data = torch.from_numpy(qaoa_opt_data_nd).to(dtype=torch.float32)
-			qaoa_opt_traindata, qaoa_opt_testdata = torch.utils.data.random_split(dataset=qaoa_opt_data, lengths=[n_train, n_test], generator=torch.Generator().manual_seed(seed))
+			qaoa_opt_traindata, qaoa_opt_testdata = torch.utils.data.random_split(dataset=qaoa_opt_data, lengths=[n_train, n_test], generator=generator)
 			qaoa_fix_data = torch.from_numpy(qaoa_fix_data_nd).to(dtype=torch.float32)
-			qaoa_fix_traindata, qaoa_fix_testdata = torch.utils.data.random_split(dataset=qaoa_fix_data, lengths=[n_train, n_test], generator=torch.Generator().manual_seed(seed))
+			qaoa_fix_traindata, qaoa_fix_testdata = torch.utils.data.random_split(dataset=qaoa_fix_data, lengths=[n_train, n_test], generator=generator)
 
 			qaoa_opt_testset = torch.utils.data.DataLoader(qaoa_opt_testdata, batch_size=batchsize, shuffle=False)
 			qaoa_opt_trainset = torch.utils.data.DataLoader(qaoa_opt_traindata, batch_size=batchsize, shuffle=True)
@@ -99,8 +99,8 @@ def main():
 			opt_qaoa_fix = torch.optim.Adam(model_qaoa_fix.parameters(), lr=lr, weight_decay=1e-4)
 			scheduler_qaoa_fix = torch.optim.lr_scheduler.StepLR(opt_qaoa_fix, step_size=45, gamma=0.1)
 
-			made.run_train(model_qaoa_opt, qaoa_opt_trainset, qaoa_opt_testset, n_epochs, opt_qaoa_opt, scheduler_qaoa_opt)
-			made.run_train(model_qaoa_fix, qaoa_fix_trainset, qaoa_fix_testset, n_epochs, opt_qaoa_fix ,scheduler_qaoa_fix)
+			made.run_train(model_qaoa_opt, qaoa_opt_trainset, qaoa_opt_testset, n_epochs, opt_qaoa_opt, scheduler_qaoa_opt, seed)
+			made.run_train(model_qaoa_fix, qaoa_fix_trainset, qaoa_fix_testset, n_epochs, opt_qaoa_fix ,scheduler_qaoa_fix, seed)
 
             # get QAOA-MADE proposal
 			qaoa_opt_pred_dist = made.sampling_MADE(model_qaoa_opt)
@@ -205,10 +205,12 @@ if __name__ == '__main__':
     # seed
     seed = 1454
     rng = np.random.default_rng(seed)
+    random.seed(seed)
+    generator = torch.Generator().manual_seed(seed)
     
     # instance
     source_dir_name = '../data/instance_set_2024-0614-1705-31'
-    n_spin = 9
+    n_spin = 3
     #beta_list = [1e1]
     beta_list = [1e-1, 1e0, 2e0, 5e0, 1e1]
     
