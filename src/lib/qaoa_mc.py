@@ -7,8 +7,8 @@ from qulacs.state import inner_product
 import numpy as np
 import sys
 
-import ising_model as ising
-import mcmc_function as mcmc
+import lib.ising_model as ising
+import lib.mcmc_function as mcmc
 
 class QAOA_circuit:
     def __init__(self, n_qubits, instance, depth):

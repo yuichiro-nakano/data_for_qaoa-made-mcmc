@@ -143,6 +143,25 @@ def run_train(model, train_data, test_data, n_epochs, opt, scheduler=None, seed=
 	run_epoch(model, 'test', test_data, opt)
 
 # sampling
+def output_MADE(input_index, model):
+    # natural_orderung = Trueとしているため、条件付き確率積の順番は昇順になっている前提！
+    # ex.) p(x1,x2,x3) = p(x3|x1,x2)p(x2|x1)p(x1)
+    n = model.nin
+    
+    bina = number_to_binary(input_index, n)
+    bina_th = torch.from_numpy(bina.copy())
+    bina_th = bina_th.float()
+    pred_th = model(bina_th)
+    
+    pred = 1.0
+    for i in range(n):
+        if bina[i] == 1:
+            pred[i] *= pred_th.detach().numpy().copy()[i]
+        else:
+            pred[i] *= 1 - pred_th.detach().numpy().copy()[i]
+        
+    return pred
+
 def sampling_MADE(model):
     # natural_orderung = Trueとしているため、条件付き確率積の順番は昇順になっている前提！
     # ex.) p(x1,x2,x3) = p(x3|x1,x2)p(x2|x1)p(x1)
