@@ -156,9 +156,9 @@ def output_MADE(input_index, model):
     pred = 1.0
     for i in range(n):
         if bina[i] == 1:
-            pred[i] *= pred_th.detach().numpy().copy()[i]
+            pred *= pred_th.detach().numpy().copy()[i]
         else:
-            pred[i] *= 1 - pred_th.detach().numpy().copy()[i]
+            pred *= 1 - pred_th.detach().numpy().copy()[i]
         
     return pred
 
