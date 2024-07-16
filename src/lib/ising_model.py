@@ -154,7 +154,7 @@ def min_exact_spin_energy(instance):
     return min_energy
 
 # boltzmann distribution
-def boltzmann_average_magnetization(n_spin, boltzmann_dist, beta):
+def boltzmann_average_magnetization(n_spin, boltzmann_dist):
     magnetization = np.array([np.sum(number_to_spin(i, n_spin)) for i in range(2**n_spin)]) / n_spin
     return np.sum(boltzmann_dist * magnetization)
 

@@ -54,6 +54,8 @@ def main():
 
 	qaoa_opt = scipy.optimize.minimize(qaoa_cost, qaoa_para, method=qaoa_method, options=qaoa_options)
 
+	check_01_time = time.time()
+
     # sampling from QAOA distribution
 	qaoa_opt_data_idx = qaoa.sampling_QAOA(qaoa_ansatz, qaoa_opt.x, n_train+n_test) # optimize parameter
 	qaoa_fix_data_idx = qaoa.sampling_QAOA(qaoa_ansatz, qaoa_init_para, n_train+n_test) # fixed angle
@@ -85,6 +87,17 @@ def main():
 	made.run_train(model_qaoa_opt, qaoa_opt_trainset, qaoa_opt_testset, n_epochs, opt_qaoa_opt, scheduler_qaoa_opt, seed)
 	made.run_train(model_qaoa_fix, qaoa_fix_trainset, qaoa_fix_testset, n_epochs, opt_qaoa_fix ,scheduler_qaoa_fix, seed)
 
+	# sampling to models and compute the probability of these outputs
+	opt_qaoa_made_outputs = made.predict(model_qaoa_opt, qaoa_opt_data_nd)
+	opt_qaoa_made_outputs = np.array([made.binary_to_spin(opt_qaoa_made_outputs[i]) for i in range(opt_qaoa_made_outputs.shape[0])])
+	fix_qaoa_made_outputs = made.predict(model_qaoa_fix, qaoa_fix_data_nd)
+	fix_qaoa_made_outputs = np.array([made.binary_to_spin(fix_qaoa_made_outputs[i]) for i in range(fix_qaoa_made_outputs.shape[0])])
+
+	opt_qaoa_made_log_prob = made.compute_log_prob(model_qaoa_opt, qaoa_opt_data_nd)
+	fix_qaoa_made_log_prob = made.compute_log_prob(model_qaoa_fix, qaoa_fix_data_nd)
+ 
+	check_02_time = time.time()
+
 	# mcmc simulation
 	opt_qaoa_made_result = np.zeros((n_chain, n_step+1, n_spin))
 	fix_qaoa_made_result = np.zeros((n_chain, n_step+1, n_spin))
@@ -92,19 +105,45 @@ def main():
 	ssf_result = np.zeros((n_chain, n_step+1, n_spin))
 
 	for k in range(n_chain):
+		# prepare initial state
 		init_spin = ising.number_to_spin(rng.integers(0, 2**n_spin), n_spin)
 		opt_qaoa_made_result[k,0] = init_spin
 		fix_qaoa_made_result[k,0] = init_spin
 		uniform_result[k,0] = init_spin
 		ssf_result[k,0] = init_spin
 
+		# compute the probabiltiy of generating the initial state
+		opt_current_state = init_spin
+		opt_current_log_prob = made.compute_log_prob(model_qaoa_opt, made.spin_to_binary(opt_current_state))
+		fix_current_state = init_spin
+		fix_current_log_prob = made.compute_log_prob(model_qaoa_fix, made.spin_to_binary(fix_current_state))
+
+		# iteration of mcmc step
 		for j in range(n_step):
-			opt_qaoa_made_result[k,j+1] = mcmc.made_update(opt_qaoa_made_result[k,j], instance, beta, model_qaoa_opt, rng)[0]
-			fix_qaoa_made_result[k,j+1] = mcmc.made_update(fix_qaoa_made_result[k,j], instance, beta, model_qaoa_fix, rng)[0]
+			# made update
+			opt_qaoa_made_result[k,j+1], acceptance, count = mcmc.boltzmann_metropolis_hastings(opt_current_state,
+                                                                                    			opt_qaoa_made_outputs[j], 
+                                                                                    			opt_current_log_prob, 
+                                                                                    			opt_qaoa_made_log_prob[j], 
+                                                                                    			instance, beta, rng)
+			if count:
+				opt_current_state = opt_qaoa_made_result[k,j+1]
+				opt_current_log_prob = opt_qaoa_made_log_prob[j]
+    
+			fix_qaoa_made_result[k,j+1], acceptance, count = mcmc.boltzmann_metropolis_hastings(fix_current_state,
+                                                                                       			fix_qaoa_made_outputs[j],
+                                                                                        		fix_current_log_prob,
+                                                                                          		fix_qaoa_made_log_prob[j], 
+                                                                                            	instance, beta, rng)
+			if count:
+				fix_current_state = fix_qaoa_made_result[k,j+1]
+				fix_current_log_prob = fix_qaoa_made_log_prob[j]
+
+			# other update
 			uniform_result[k,j+1] = mcmc.uniform_update(uniform_result[k,j], instance, beta, rng)[0]
 			ssf_result[k,j+1] = mcmc.ssf_update(ssf_result[k,j], instance, beta, rng)[0]
 
-	calc_time = time.time() - start_time
+	end_time = time.time()
 
 	# export results
 	sub_folder_name = "{0}_sites_result".format(n_spin)
@@ -123,7 +162,19 @@ def main():
         
 	path_config = sub_folder_path.joinpath(datename+'_runtime.txt')
 	with open(str(path_config), mode='w') as f:
-		f.write("calculation time [s] : {0}\n".format(calc_time))
+		f.write("total time [s] : {0}\n".format(end_time-start_time))
+		f.write("======\n")
+		f.write("QAOA optimization [s] : {0}\n".format(check_01_time-start_time))
+		f.write("MADE training & sampling [s] : {0}\n".format(check_02_time-check_01_time))
+		f.write("MCMC simulation [s] : {0}\n".format(end_time-check_02_time))
+		f.write("======\n")
+		f.write("beta : {0}\n".format(beta))
+		f.write("======\n")
+		f.write("n_train : {0}\n".format(n_train))
+		f.write("n_test : {0}\n".format(n_test))
+		f.write("lr : {0}\n".format(lr))
+		f.write("batchsize : {0}\n".format(batchsize))
+		f.write("n_epochs : {0}\n".format(n_epochs))
 
 if __name__ == '__main__':
 	# seed
@@ -134,8 +185,8 @@ if __name__ == '__main__':
 
 	# instance
 	source_dir_name = '../data'
-	n_spin = 10
-	beta = 2.0
+	n_spin = 15
+	beta = 1.0
 
 	# QAOA
 	n_layers = 5
@@ -148,7 +199,7 @@ if __name__ == '__main__':
 	n_test = int(n_train * 0.25)
 	hidden_size = int(2 * n_spin)
 	hidden_layers = 2
-	batchsize = 16
+	batchsize = 8
 	lr = 0.005
 	n_epochs = 30
 

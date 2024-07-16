@@ -9,6 +9,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import ising_model as ising
+
 # ------------------------------------------------------------------------------
 
 class MaskedLinear(nn.Linear):
@@ -53,7 +55,7 @@ class MADE(nn.Module):
                     nn.LeakyReLU(), # change ReLU to LeakyReLU
                 ])
         self.net.pop() # pop the last ReLU for the output layer
-        self.net.append(nn.Sigmoid()) # add the sigmoid for the output layer
+        #self.net.append(nn.Sigmoid()) # add the sigmoid for the output layer
         self.net = nn.Sequential(*self.net)
         
         # seeds for orders/connectivities of the model ensemble
@@ -115,14 +117,14 @@ def run_epoch(model, split, dataset, opt, seed=None):
 	x = dataset
 	for i, xb in enumerate(x):
 		# get the logits, potentially run the same batch a number of times, resampling each time
-		xbhat = torch.zeros_like(xb)
 		model.update_masks()
 
 		# forward the model
-		xbhat += model(xb)
+		logits = model(xb)
 
 		# evaluate the binary cross entropy loss
-		loss = F.binary_cross_entropy(xbhat, xb)
+		criterion = nn.BCEWithLogitsLoss()
+		loss = criterion(logits, xb)
 
 		# backward/update
 		if split == 'train':
@@ -130,38 +132,40 @@ def run_epoch(model, split, dataset, opt, seed=None):
 			loss.backward()
 			opt.step()
 
+	return loss
+
 def run_train(model, train_data, test_data, n_epochs, opt, scheduler=None, seed=None):
 	if seed != None:
 		set_seed(seed)
 
+	train_loss = []
+	test_loss = []
+
 	for epoch in range(n_epochs):
-		run_epoch(model, 'test', test_data, opt)
-		run_epoch(model, 'train', train_data, opt)
+		test_loss.append(run_epoch(model, 'test', test_data, opt))
+		train_loss.append(run_epoch(model, 'train', train_data, opt))
 		if scheduler:
 			scheduler.step()
 	
-	run_epoch(model, 'test', test_data, opt)
+	test_loss.append(run_epoch(model, 'test', test_data, opt))
+
+	return train_loss, test_loss
 
 # sampling
-def output_MADE(input_index, model):
-    # natural_orderung = Trueとしているため、条件付き確率積の順番は昇順になっている前提！
-    # ex.) p(x1,x2,x3) = p(x3|x1,x2)p(x2|x1)p(x1)
+def predict(model, inputs: np.ndarray):
     n = model.nin
     
-    bina = number_to_binary(input_index, n)
-    bina_th = torch.from_numpy(bina.copy())
-    bina_th = bina_th.float()
-    pred_th = model(bina_th)
+    # convert ndarray to torch.tensor
+    inputs_th = torch.from_numpy(inputs.copy()).to(dtype=torch.float32)
     
-    pred = 1.0
-    for i in range(n):
-        if bina[i] == 1:
-            pred *= pred_th.detach().numpy().copy()[i]
-        else:
-            pred *= 1 - pred_th.detach().numpy().copy()[i]
-        
-    return pred
+    # apply model and sampling
+    logits = model(inputs_th)
+    outputs_th = torch.bernoulli(torch.sigmoid(logits))
+    outputs = outputs_th.detach().numpy()
+    
+    return outputs
 
+"""
 def sampling_MADE(model):
     # natural_orderung = Trueとしているため、条件付き確率積の順番は昇順になっている前提！
     # ex.) p(x1,x2,x3) = p(x3|x1,x2)p(x2|x1)p(x1)
@@ -172,7 +176,7 @@ def sampling_MADE(model):
         bina = number_to_binary(i, n)
         bina_th = torch.from_numpy(bina.copy())
         bina_th = bina_th.float()
-        pred_th = model(bina_th)
+        pred_th = torch.sigmoid(model(bina_th))
 
         pred = np.zeros(n)
         for j in range(n):
@@ -184,6 +188,21 @@ def sampling_MADE(model):
         pred_dist[i] = np.prod(pred)
         
     return pred_dist
+"""
+
+def compute_log_prob(model, inputs: np.ndarray):
+	n = model.nin
+
+	# convert ndarray to torch.tensor
+	inputs_th = torch.from_numpy(inputs.copy()).to(dtype=torch.float32)
+    
+    # compute the (log) probability of outputs
+	logits = model(inputs_th)
+	criterion = nn.BCEWithLogitsLoss(reduction='none')
+	log_prob = -1.0 * criterion(logits, inputs_th)
+	prob = log_prob.sum(dim=-1)
+
+	return prob.detach().numpy()
 
 def number_to_binary(number, n_dim):
     bin = format(number,"b").zfill(n_dim)
@@ -191,3 +210,18 @@ def number_to_binary(number, n_dim):
     bin_list = np.flipud(bin_list)
     
     return bin_list
+
+def binary_to_number(binary_list):
+	n_dim = binary_list.shape[0]
+
+	return int(sum([(2**i)*binary_list[i] for i in range(n_dim)]))
+
+def spin_to_binary(spin_list):
+	idx = ising.spin_to_number(spin_list)
+
+	return number_to_binary(idx, spin_list.shape[0])
+
+def binary_to_spin(binary_list):
+	idx = binary_to_number(binary_list)
+
+	return ising.number_to_spin(idx, binary_list.shape[0])

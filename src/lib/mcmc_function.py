@@ -54,7 +54,7 @@ def boltzmann_metropolis(spin, proposal_spin, instance, beta, rng=None):
 	elif energy_diff < -500:
 		acceptance = 0.0
 	else:
-		acceptance = float(min(1, np.exp(energy_diff)))
+		acceptance = np.exp(np.minimum(energy_diff, 0.0))
 
 	# accept/reject propose
 	if acceptance >= rng.uniform(0,1):
@@ -64,7 +64,7 @@ def boltzmann_metropolis(spin, proposal_spin, instance, beta, rng=None):
 		count = 0
 		return spin, acceptance, count
     
-def boltzmann_metropolis_hastings(spin, proposal_spin, proposal_prob, reverse_proposal_prob, instance, beta, rng=None):
+def boltzmann_metropolis_hastings(spin, proposal_spin, proposal_log_prob, reverse_proposal_log_prob, instance, beta, rng=None):
 	if rng == None:
 		rng = np.random.default_rng()
      
@@ -73,18 +73,14 @@ def boltzmann_metropolis_hastings(spin, proposal_spin, proposal_prob, reverse_pr
     
 	energy_diff = -1.0 * beta * (ising.spin_energy(proposal_spin,instance) - ising.spin_energy(spin,instance))
     
-	# avoid dividing zero when Q(i->j)=0
-	if proposal_prob < 1e-15:
-		acceptance = 1.0
-    
 	# avoid overflowing an imput of np.exp()
 	if energy_diff > 500:
 		acceptance = 1.0
 	elif energy_diff < -500:
 		acceptance = 0.0
 	else:
-		diff = np.exp(energy_diff) * reverse_proposal_prob / proposal_prob
-		acceptance = np.minimum(1, diff) 
+		diff = energy_diff + reverse_proposal_log_prob - proposal_log_prob
+		acceptance = np.exp(np.minimum(diff, 0.0))
     
 	# accept/reject propose
 	if acceptance >= rng.uniform(0,1):
@@ -105,29 +101,6 @@ def single_spin_flip(spin, flip_index):
         proposal_spin[flip_index] = 1
         
     return proposal_spin
-
-def made_proposal(spin, model, rng=None):
-	if rng == None:
-		rng = np.random.default_rng()
-    
-	n_spin = spin.shape[0]
-
-	index = ising.spin_to_number(spin)
-	bina = made.number_to_binary(index, n_spin)
-	bina_th = torch.from_numpy(bina.copy())
-	bina_th = bina_th.float()
-	pred_th = model(bina_th)
-
-	proposal_spin = spin.copy()
-	prob = 1.0
-	for i in range(n_spin):
-		prob *= pred_th.detach().numpy().copy()[i]
-		if prob >= rng.uniform(0,1):
-			proposal_spin[i] = -1 # pred_thはbinaryで1のときの確率より
-		else:
-			proposal_spin[i] = 1
-
-	return proposal_spin
    
 # mcmc 
 def ssf_update(spin, instance, beta, rng=None):
@@ -150,25 +123,10 @@ def uniform_update(spin, instance, beta, rng=None):
 	n_spin = spin.shape[0]
 
 	# make a porposal
-	proposal_spin = number_to_spin(rng.integers(0, n_spin), n_spin)
+	proposal_spin = number_to_spin(rng.integers(0, 2**n_spin), n_spin)
 
 	# accept or reject the proposal
 	return boltzmann_metropolis(spin, proposal_spin, instance, beta, rng)
-
-def made_update(spin, instance, beta, model, rng=None):
-	if rng == None:
-		rng = np.random.default_rng()
-    
-	n_spin = spin.shape[0]
-    
-    # make proposal
-	proposal_spin = made_proposal(spin, model, rng)
-
-	# accept or reject the proposal
-	proposal_prob = made.output_MADE(ising.spin_to_number(spin), model)
-	reverse_proposal_prob = made.output_MADE(ising.spin_to_number(proposal_spin), model)
-
-	return boltzmann_metropolis_hastings(spin, proposal_spin, proposal_prob, reverse_proposal_prob, instance, beta, rng)
 
 # utils
 def calc_boltzmann_mh_acceptance(energy_vector, proposal_mat, beta):
