@@ -88,9 +88,11 @@ def main():
 	made.run_train(model_qaoa_fix, qaoa_fix_trainset, qaoa_fix_testset, n_epochs, opt_qaoa_fix ,scheduler_qaoa_fix, seed)
 
 	# sampling to models and compute the probability of these outputs
-	opt_qaoa_made_outputs = made.predict(model_qaoa_opt, qaoa_opt_data_nd)
+	inputs = rng.integers(2, size=(n_step,n_spin)).astype(dtype=np.float32)
+
+	opt_qaoa_made_outputs = made.predict(model_qaoa_opt, inputs)
 	opt_qaoa_made_outputs = np.array([made.binary_to_spin(opt_qaoa_made_outputs[i]) for i in range(opt_qaoa_made_outputs.shape[0])])
-	fix_qaoa_made_outputs = made.predict(model_qaoa_fix, qaoa_fix_data_nd)
+	fix_qaoa_made_outputs = made.predict(model_qaoa_fix, inputs)
 	fix_qaoa_made_outputs = np.array([made.binary_to_spin(fix_qaoa_made_outputs[i]) for i in range(fix_qaoa_made_outputs.shape[0])])
 
 	opt_qaoa_made_log_prob = made.compute_log_prob(model_qaoa_opt, qaoa_opt_data_nd)
@@ -186,7 +188,7 @@ if __name__ == '__main__':
 	# instance
 	source_dir_name = '../data'
 	n_spin = 15
-	beta = 1.0
+	beta = 5.0
 
 	# QAOA
 	n_layers = 5

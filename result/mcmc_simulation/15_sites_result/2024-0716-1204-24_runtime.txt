@@ -1,0 +1,13 @@
+total time [s] : 96.68638610839844
+======
+QAOA optimization [s] : 43.3095121383667
+MADE training & sampling [s] : 13.987767934799194
+MCMC simulation [s] : 39.389106035232544
+======
+beta : 5.0
+======
+n_train : 8000
+n_test : 2000
+lr : 0.005
+batchsize : 8
+n_epochs : 30
