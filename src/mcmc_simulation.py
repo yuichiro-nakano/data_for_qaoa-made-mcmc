@@ -88,15 +88,13 @@ def main():
 	made.run_train(model_qaoa_fix, qaoa_fix_trainset, qaoa_fix_testset, n_epochs, opt_qaoa_fix ,scheduler_qaoa_fix, seed)
 
 	# sampling to models and compute the probability of these outputs
-	inputs = rng.integers(2, size=(n_step,n_spin)).astype(dtype=np.float32)
-
-	opt_qaoa_made_outputs = made.predict(model_qaoa_opt, inputs)
+	opt_qaoa_made_outputs = made.predict(model_qaoa_opt, n_step)
 	opt_qaoa_made_outputs = np.array([made.binary_to_spin(opt_qaoa_made_outputs[i]) for i in range(opt_qaoa_made_outputs.shape[0])])
-	fix_qaoa_made_outputs = made.predict(model_qaoa_fix, inputs)
+	fix_qaoa_made_outputs = made.predict(model_qaoa_fix, n_step)
 	fix_qaoa_made_outputs = np.array([made.binary_to_spin(fix_qaoa_made_outputs[i]) for i in range(fix_qaoa_made_outputs.shape[0])])
 
-	opt_qaoa_made_log_prob = made.compute_log_prob(model_qaoa_opt, qaoa_opt_data_nd)
-	fix_qaoa_made_log_prob = made.compute_log_prob(model_qaoa_fix, qaoa_fix_data_nd)
+	opt_qaoa_made_log_prob = made.compute_log_prob(model_qaoa_opt, opt_qaoa_made_outputs)
+	fix_qaoa_made_log_prob = made.compute_log_prob(model_qaoa_fix, fix_qaoa_made_outputs)
  
 	check_02_time = time.time()
 
@@ -124,9 +122,9 @@ def main():
 		for j in range(n_step):
 			# made update
 			opt_qaoa_made_result[k,j+1], acceptance, count = mcmc.boltzmann_metropolis_hastings(opt_current_state,
-                                                                                    			opt_qaoa_made_outputs[j], 
-                                                                                    			opt_current_log_prob, 
-                                                                                    			opt_qaoa_made_log_prob[j], 
+                                                                                    			opt_qaoa_made_outputs[j],  
+                                                                                    			opt_qaoa_made_log_prob[j],
+																								opt_current_log_prob,
                                                                                     			instance, beta, rng)
 			if count:
 				opt_current_state = opt_qaoa_made_result[k,j+1]
@@ -134,8 +132,8 @@ def main():
     
 			fix_qaoa_made_result[k,j+1], acceptance, count = mcmc.boltzmann_metropolis_hastings(fix_current_state,
                                                                                        			fix_qaoa_made_outputs[j],
-                                                                                        		fix_current_log_prob,
-                                                                                          		fix_qaoa_made_log_prob[j], 
+																								fix_qaoa_made_log_prob[j],
+                                                                                        		fix_current_log_prob, 
                                                                                             	instance, beta, rng)
 			if count:
 				fix_current_state = fix_qaoa_made_result[k,j+1]
@@ -187,7 +185,7 @@ if __name__ == '__main__':
 
 	# instance
 	source_dir_name = '../data'
-	n_spin = 15
+	n_spin = 10
 	beta = 5.0
 
 	# QAOA
@@ -197,7 +195,7 @@ if __name__ == '__main__':
 	qaoa_options = {"disp": False, "maxiter": 200, "gtol": 1e-6}
 
 	# MADE
-	n_train = 8000
+	n_train = 1000
 	n_test = int(n_train * 0.25)
 	hidden_size = int(2 * n_spin)
 	hidden_layers = 2

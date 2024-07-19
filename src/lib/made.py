@@ -8,6 +8,7 @@ import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import Bernoulli
 
 import ising_model as ising
 
@@ -115,6 +116,8 @@ def run_epoch(model, split, dataset, opt, seed=None):
 
 	model.train() if split == 'train' else model.eval()
 	x = dataset
+
+	lossfs = []
 	for i, xb in enumerate(x):
 		# get the logits, potentially run the same batch a number of times, resampling each time
 		model.update_masks()
@@ -125,6 +128,8 @@ def run_epoch(model, split, dataset, opt, seed=None):
 		# evaluate the binary cross entropy loss
 		criterion = nn.BCEWithLogitsLoss()
 		loss = criterion(logits, xb)
+		lossf = loss.data.item()
+		lossfs.append(lossf)
 
 		# backward/update
 		if split == 'train':
@@ -132,7 +137,7 @@ def run_epoch(model, split, dataset, opt, seed=None):
 			loss.backward()
 			opt.step()
 
-	return loss
+	return np.mean(lossfs)
 
 def run_train(model, train_data, test_data, n_epochs, opt, scheduler=None, seed=None):
 	if seed != None:
@@ -142,28 +147,32 @@ def run_train(model, train_data, test_data, n_epochs, opt, scheduler=None, seed=
 	test_loss = []
 
 	for epoch in range(n_epochs):
-		test_loss.append(run_epoch(model, 'test', test_data, opt))
 		train_loss.append(run_epoch(model, 'train', train_data, opt))
+		test_loss.append(run_epoch(model, 'test', test_data, opt))
 		if scheduler:
 			scheduler.step()
-	
-	test_loss.append(run_epoch(model, 'test', test_data, opt))
 
 	return train_loss, test_loss
 
 # sampling
-def predict(model, inputs: np.ndarray):
-    n = model.nin
+def predict(model, n_sample):
+	n = model.nin
     
     # convert ndarray to torch.tensor
-    inputs_th = torch.from_numpy(inputs.copy()).to(dtype=torch.float32)
+	inputs_th = torch.zeros(n_sample, n)
     
     # apply model and sampling
-    logits = model(inputs_th)
-    outputs_th = torch.bernoulli(torch.sigmoid(logits))
-    outputs = outputs_th.detach().numpy()
+	outputs_th = torch.zeros_like(inputs_th)
+
+	for i in range(n):
+		probs = torch.sigmoid(model(inputs_th))[:,i]
+		samples = torch.bernoulli(probs)
+		inputs_th[:,i] += samples
+		outputs_th[:,i] += samples
+	
+	outputs = outputs_th.detach().numpy().copy()
     
-    return outputs
+	return outputs
 
 """
 def sampling_MADE(model):
@@ -203,6 +212,22 @@ def compute_log_prob(model, inputs: np.ndarray):
 	prob = log_prob.sum(dim=-1)
 
 	return prob.detach().numpy()
+
+"""
+def compute_log_prob_2(model, inputs: np.ndarray):
+	n = model.nin
+
+	# convert ndarray to torch.tensor
+	inputs_th = torch.from_numpy(inputs.copy()).to(dtype=torch.float32)
+    
+    # compute the (log) probability of outputs
+	logits = model(inputs_th)
+	criterion = nn.BCEWithLogitsLoss(reduction='none')
+	log_prob = -1.0 * criterion(logits, inputs_th)
+	prob = log_prob.sum(dim=-1)
+
+	return prob.detach().numpy()
+"""
 
 def number_to_binary(number, n_dim):
     bin = format(number,"b").zfill(n_dim)
