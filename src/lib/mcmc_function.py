@@ -73,7 +73,8 @@ def boltzmann_metropolis_hastings(spin, proposal_spin, proposal_log_prob, revers
     
 	energy_diff = -1.0 * beta * (ising.spin_energy(proposal_spin,instance) - ising.spin_energy(spin,instance))
 	diff = energy_diff + reverse_proposal_log_prob - proposal_log_prob
-	acceptance = np.exp(np.minimum(diff, 0.0))
+	diff = np.exp(diff)
+	acceptance = np.minimum(diff, 1.0)
     
 	# accept/reject propose
 	if acceptance >= rng.uniform(0,1):

@@ -185,7 +185,7 @@ if __name__ == '__main__':
 
 	# instance
 	source_dir_name = '../data'
-	n_spin = 10
+	n_spin = 5
 	beta = 5.0
 
 	# QAOA
