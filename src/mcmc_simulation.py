@@ -154,8 +154,8 @@ if __name__ == '__main__':
 
 	# instance
 	source_dir_name = '../data'
-	n_spin = 15
-	beta = 1.0
+	n_spin = 20
+	beta = 2.5
 
 	# QAOA
 	n_layers = 5
