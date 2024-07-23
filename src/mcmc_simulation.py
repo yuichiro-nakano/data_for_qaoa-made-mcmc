@@ -88,13 +88,13 @@ def main():
 	made.run_train(model_qaoa_fix, qaoa_fix_trainset, qaoa_fix_testset, n_epochs, opt_qaoa_fix ,scheduler_qaoa_fix, seed)
 
 	# sampling to models and compute the probability of these outputs
-	opt_qaoa_made_outputs = made.predict(model_qaoa_opt, n_step)
-	opt_qaoa_made_outputs = np.array([made.binary_to_spin(opt_qaoa_made_outputs[i]) for i in range(opt_qaoa_made_outputs.shape[0])])
-	fix_qaoa_made_outputs = made.predict(model_qaoa_fix, n_step)
-	fix_qaoa_made_outputs = np.array([made.binary_to_spin(fix_qaoa_made_outputs[i]) for i in range(fix_qaoa_made_outputs.shape[0])])
+	opt_qaoa_made_outputs_nd = made.predict(model_qaoa_opt, n_step)
+	opt_qaoa_made_outputs_spin = np.array([made.binary_to_spin(opt_qaoa_made_outputs_nd[i]) for i in range(opt_qaoa_made_outputs_nd.shape[0])])
+	fix_qaoa_made_outputs_nd = made.predict(model_qaoa_fix, n_step)
+	fix_qaoa_made_outputs_spin = np.array([made.binary_to_spin(fix_qaoa_made_outputs_nd[i]) for i in range(fix_qaoa_made_outputs_nd.shape[0])])
 
-	opt_qaoa_made_log_prob = made.compute_log_prob(model_qaoa_opt, opt_qaoa_made_outputs)
-	fix_qaoa_made_log_prob = made.compute_log_prob(model_qaoa_fix, fix_qaoa_made_outputs)
+	opt_qaoa_made_log_prob = made.compute_log_prob(model_qaoa_opt, opt_qaoa_made_outputs_nd)
+	fix_qaoa_made_log_prob = made.compute_log_prob(model_qaoa_fix, fix_qaoa_made_outputs_nd)
  
 	check_02_time = time.time()
 
@@ -105,43 +105,12 @@ def main():
 	ssf_result = np.zeros((n_chain, n_step+1, n_spin))
 
 	for k in range(n_chain):
-		# prepare initial state
 		init_spin = ising.number_to_spin(rng.integers(0, 2**n_spin), n_spin)
-		opt_qaoa_made_result[k,0] = init_spin
-		fix_qaoa_made_result[k,0] = init_spin
-		uniform_result[k,0] = init_spin
-		ssf_result[k,0] = init_spin
 
-		# compute the probabiltiy of generating the initial state
-		opt_current_state = init_spin
-		opt_current_log_prob = made.compute_log_prob(model_qaoa_opt, made.spin_to_binary(opt_current_state))
-		fix_current_state = init_spin
-		fix_current_log_prob = made.compute_log_prob(model_qaoa_fix, made.spin_to_binary(fix_current_state))
-
-		# iteration of mcmc step
-		for j in range(n_step):
-			# made update
-			opt_qaoa_made_result[k,j+1], acceptance, count = mcmc.boltzmann_metropolis_hastings(opt_current_state,
-                                                                                    			opt_qaoa_made_outputs[j],  
-                                                                                    			opt_qaoa_made_log_prob[j],
-																								opt_current_log_prob,
-                                                                                    			instance, beta, rng)
-			if count:
-				opt_current_state = opt_qaoa_made_result[k,j+1]
-				opt_current_log_prob = opt_qaoa_made_log_prob[j]
-    
-			fix_qaoa_made_result[k,j+1], acceptance, count = mcmc.boltzmann_metropolis_hastings(fix_current_state,
-                                                                                       			fix_qaoa_made_outputs[j],
-																								fix_qaoa_made_log_prob[j],
-                                                                                        		fix_current_log_prob, 
-                                                                                            	instance, beta, rng)
-			if count:
-				fix_current_state = fix_qaoa_made_result[k,j+1]
-				fix_current_log_prob = fix_qaoa_made_log_prob[j]
-
-			# other update
-			uniform_result[k,j+1] = mcmc.uniform_update(uniform_result[k,j], instance, beta, rng)[0]
-			ssf_result[k,j+1] = mcmc.ssf_update(ssf_result[k,j], instance, beta, rng)[0]
+		opt_qaoa_made_result[k] = mcmc.neural_update_mcmc(init_spin, instance, model_qaoa_opt, opt_qaoa_made_outputs_spin, opt_qaoa_made_log_prob, beta, n_step, rng)[0]
+		fix_qaoa_made_result[k] = mcmc.neural_update_mcmc(init_spin, instance, model_qaoa_fix, fix_qaoa_made_outputs_spin, fix_qaoa_made_log_prob, beta, n_step, rng)[0]
+		uniform_result[k] = mcmc.uniform_update_mcmc(init_spin, instance, beta, n_step, rng)[0]
+		ssf_result[k] = mcmc.ssf_update_mcmc(init_spin, instance, beta, n_step, rng)[0]
 
 	end_time = time.time()
 
@@ -185,8 +154,8 @@ if __name__ == '__main__':
 
 	# instance
 	source_dir_name = '../data'
-	n_spin = 5
-	beta = 5.0
+	n_spin = 15
+	beta = 1.0
 
 	# QAOA
 	n_layers = 5
