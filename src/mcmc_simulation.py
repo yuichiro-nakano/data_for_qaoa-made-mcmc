@@ -98,10 +98,10 @@ def main():
 	check_02_time = time.time()
 
 	# mcmc simulation
-	opt_qaoa_made_result = np.zeros((n_chain, n_step+1, n_spin))
-	fix_qaoa_made_result = np.zeros((n_chain, n_step+1, n_spin))
-	uniform_result = np.zeros((n_chain, n_step+1, n_spin))
-	ssf_result = np.zeros((n_chain, n_step+1, n_spin))
+	opt_qaoa_made_result = np.zeros((n_chain, n_step+1, n_spin), dtype=np.int8)
+	fix_qaoa_made_result = np.zeros((n_chain, n_step+1, n_spin), dtype=np.int8)
+	uniform_result = np.zeros((n_chain, n_step+1, n_spin), dtype=np.int8)
+	ssf_result = np.zeros((n_chain, n_step+1, n_spin), dtype=np.int8)
 
 	for k in range(n_chain):
 		init_spin = ising.number_to_spin(rng.integers(0, 2**n_spin), n_spin)
@@ -173,7 +173,7 @@ if __name__ == '__main__':
 
 	# mcmc
 	n_chain = 10
-	n_step = 10000
+	n_step = 100000
 
 	# return
 	result_dir_name = '../result/mcmc_simulation'
