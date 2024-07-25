@@ -153,7 +153,7 @@ if __name__ == '__main__':
 
 	# instance
 	source_dir_name = '../data'
-	n_spin = 5
+	n_spin = 20
 	beta = 2.5
 
 	# QAOA
@@ -173,7 +173,7 @@ if __name__ == '__main__':
 
 	# mcmc
 	n_chain = 10
-	n_step = 1000
+	n_step = 100000
 
 	# return
 	result_dir_name = '../result/mcmc_simulation'
