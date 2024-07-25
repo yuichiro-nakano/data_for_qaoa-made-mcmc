@@ -213,7 +213,7 @@ if __name__ == '__main__':
     
     # instance
     source_dir_name = '../data/instance_set_2024-0614-1705-31'
-    n_spin = 11
+    n_spin = 12
     #beta_list = [1e1]
     beta_list = [1e-1, 1e0, 2e0, 5e0, 1e1]
     
