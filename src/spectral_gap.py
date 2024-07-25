@@ -103,8 +103,11 @@ def main():
 			made.run_train(model_qaoa_fix, qaoa_fix_trainset, qaoa_fix_testset, n_epochs, opt_qaoa_fix ,scheduler_qaoa_fix, seed)
 
             # get QAOA-MADE proposal
-			qaoa_opt_pred_dist = made.sampling_MADE(model_qaoa_opt)
-			qaoa_fix_pred_dist = made.sampling_MADE(model_qaoa_fix)
+			all_inputs = np.array([made.number_to_binary(i, n_spin) for i in range(2**n_spin)])
+			qaoa_opt_pred_dist = made.compute_log_prob(model_qaoa_opt, all_inputs)
+			qaoa_opt_pred_dist = np.exp(qaoa_opt_pred_dist)
+			qaoa_fix_pred_dist = made.compute_log_prob(model_qaoa_fix, all_inputs)
+			qaoa_fix_pred_dist = np.exp(qaoa_fix_pred_dist)
             
 			# optimize QAOA-MC
 			qaoa_mc_ansatz = qaoa_mc.QAOA_circuit(n_spin, instance, 2*n_layers)
@@ -210,7 +213,7 @@ if __name__ == '__main__':
     
     # instance
     source_dir_name = '../data/instance_set_2024-0614-1705-31'
-    n_spin = 10
+    n_spin = 11
     #beta_list = [1e1]
     beta_list = [1e-1, 1e0, 2e0, 5e0, 1e1]
     
