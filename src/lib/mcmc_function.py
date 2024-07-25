@@ -5,8 +5,8 @@ os.environ["OMP_NUM_THREADS"] = "8"
 import numpy as np
 import scipy
 import torch
-import ising_model as ising
-import made as made
+import lib.ising_model as ising
+import lib.made as made
 
 # spin
 def spin_to_number(spin):
