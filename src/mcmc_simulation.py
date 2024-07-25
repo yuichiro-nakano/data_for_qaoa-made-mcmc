@@ -24,7 +24,6 @@ import lib.ising_model as ising
 from lib.ising_model import Ising_model
 import lib.QAOA_function as qaoa
 from lib.QAOA_function import QAOA_ansatz
-import lib.qaoa_mc as qaoa_mc
 sys.modules['ising_model'] = ising # specify my module to load pickles of the instance set
 
 os.environ["MKL_NUM_THREADS"] = "8"
