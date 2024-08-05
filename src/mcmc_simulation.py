@@ -114,7 +114,7 @@ def main():
 	end_time = time.time()
 
 	# export results
-	sub_folder_name = "{0}_sites_result".format(n_spin)
+	sub_folder_name = "{0}_sites_result_2".format(n_spin)
 	sub_folder_path = pathlib.Path(result_dir_name).joinpath(sub_folder_name)
 	if not os.path.exists(str(sub_folder_path)):
 		os.makedirs(str(sub_folder_path))
@@ -143,6 +143,8 @@ def main():
 		f.write("lr : {0}\n".format(lr))
 		f.write("batchsize : {0}\n".format(batchsize))
 		f.write("n_epochs : {0}\n".format(n_epochs))
+		f.write("======\n")
+		f.write("QAOA opt parameter : {0}\n".format(qaoa_opt.x))
 
 if __name__ == '__main__':
 	# seed
@@ -154,7 +156,7 @@ if __name__ == '__main__':
 	# instance
 	source_dir_name = '../data'
 	n_spin = 25
-	beta = 2.5
+	beta = 5.0
 
 	# QAOA
 	n_layers = 5
@@ -163,7 +165,7 @@ if __name__ == '__main__':
 	qaoa_options = {"disp": False, "maxiter": 200, "gtol": 1e-6}
 
 	# MADE
-	n_train = 1000
+	n_train = 8000
 	n_test = int(n_train * 0.25)
 	hidden_size = int(2 * n_spin)
 	hidden_layers = 2
