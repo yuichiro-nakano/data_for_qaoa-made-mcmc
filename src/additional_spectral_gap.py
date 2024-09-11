@@ -49,7 +49,7 @@ def main():
 	# run calculation for each temperature
 	n_beta = len(beta_list)
 	n_instance = len(instance_set)
-	gap_data = np.zeros((n_beta, 5, n_instance))
+	gap_data = np.zeros((n_beta, 2, n_instance))
 
 	l = 0
 	for beta in beta_list:
