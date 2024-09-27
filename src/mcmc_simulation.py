@@ -103,8 +103,9 @@ def main():
 	uniform_result = np.zeros((n_chain, n_step+1, n_spin), dtype=np.int8)
 	ssf_result = np.zeros((n_chain, n_step+1, n_spin), dtype=np.int8)
 
+	init_spin_idx_set = rng.choice(2**n_spin, n_chain, replace=False)
 	for k in range(n_chain):
-		init_spin = ising.number_to_spin(rng.integers(0, 2**n_spin), n_spin)
+		init_spin = ising.number_to_spin(init_spin_idx_set[k], n_spin)
 
 		opt_qaoa_made_result[k] = mcmc.neural_update_mcmc(init_spin, instance, model_qaoa_opt, opt_qaoa_made_outputs_spin, opt_qaoa_made_log_prob, beta, n_step, rng)[0]
 		fix_qaoa_made_result[k] = mcmc.neural_update_mcmc(init_spin, instance, model_qaoa_fix, fix_qaoa_made_outputs_spin, fix_qaoa_made_log_prob, beta, n_step, rng)[0]
