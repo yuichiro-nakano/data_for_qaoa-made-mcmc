@@ -115,7 +115,7 @@ def main():
 	end_time = time.time()
 
 	# export results
-	sub_folder_name = "{0}_sites_result_2".format(n_spin)
+	sub_folder_name = "{0}_sites_result_3".format(n_spin)
 	sub_folder_path = pathlib.Path(result_dir_name).joinpath(sub_folder_name)
 	if not os.path.exists(str(sub_folder_path)):
 		os.makedirs(str(sub_folder_path))
