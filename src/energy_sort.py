@@ -36,7 +36,7 @@ def main():
 		instance = pickle.load(f)
 
 	# energy sort
-	state = np.array([np.sum(ising.number_to_spin(i, n_spin)) for i in range(2**n_spin)], dtype=np.int8)
+	state = np.array([ising.number_to_spin(i, n_spin) for i in range(2**n_spin)], dtype=np.int8)
 	energy = np.array([ising.spin_energy(state[i], instance) for i in range(2**n_spin)], dtype=np.float16)
 
 	energy_sort_idx = np.argsort(energy, kind='quicksort')
@@ -52,7 +52,7 @@ if __name__ == '__main__':
 
 	# instance
 	source_dir_name = '../data'
-	n_spin = 10
+	n_spin = 25
 
 	# return
 	result_dir_name = '../data'
