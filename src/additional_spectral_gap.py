@@ -171,7 +171,7 @@ if __name__ == '__main__':
     seed = 1454
     rng = np.random.default_rng(seed)
     random.seed(seed)
-    generator = torch.Generator().manual_seed(seed)
+    generator = torch.Generator()
     torch.manual_seed(seed)
     
     # instance
