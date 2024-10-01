@@ -148,8 +148,8 @@ def run_train(model, train_data, test_data, n_epochs, opt, scheduler=None, seed=
 	test_loss = []
 
 	for epoch in range(n_epochs):
-		train_loss.append(run_epoch(model, 'train', train_data, opt))
-		test_loss.append(run_epoch(model, 'test', test_data, opt))
+		train_loss.append(run_epoch(model, 'train', train_data, opt ,seed))
+		test_loss.append(run_epoch(model, 'test', test_data, opt, seed))
 		if scheduler:
 			scheduler.step()
 

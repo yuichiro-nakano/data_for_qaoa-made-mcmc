@@ -58,4 +58,3 @@ if __name__ == '__main__':
 	result_dir_name = '../data'
 
 	main()
-  
