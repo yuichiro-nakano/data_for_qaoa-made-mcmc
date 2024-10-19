@@ -6,8 +6,8 @@ from qulacs import QuantumState, Observable, QuantumCircuit, ParametricQuantumCi
 from qulacs.state import inner_product
 import numpy as np
 
-#import lib.ising_model as ising
-import ising_model as ising
+import lib.ising_model as ising
+#import ising_model as ising
 
 # ansatz
 class QAOA_ansatz:
