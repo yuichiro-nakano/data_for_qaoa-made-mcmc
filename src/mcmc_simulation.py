@@ -33,7 +33,7 @@ def main():
 	start_time = time.time()
 
 	# import instance
-	fname_in = pathlib.Path(source_dir_name).joinpath('{0}_sites_instance.pickle'.format(n_spin))
+	fname_in = pathlib.Path(source_dir_name).joinpath('{0}_sites_instance_05.pickle'.format(n_spin))
 	with open(str(fname_in), 'rb') as f:
 		instance = pickle.load(f)
 
@@ -115,7 +115,7 @@ def main():
 	end_time = time.time()
 
 	# export results
-	sub_folder_name = "{0}_sites_result_3".format(n_spin)
+	sub_folder_name = "{0}_sites_result_05".format(n_spin)
 	sub_folder_path = pathlib.Path(result_dir_name).joinpath(sub_folder_name)
 	if not os.path.exists(str(sub_folder_path)):
 		os.makedirs(str(sub_folder_path))
