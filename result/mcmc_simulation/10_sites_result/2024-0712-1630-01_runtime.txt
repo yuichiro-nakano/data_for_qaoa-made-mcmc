@@ -1,1 +1,0 @@
-calculation time [s] : 53.10503816604614
