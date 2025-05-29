@@ -1,5 +1,4 @@
-cff-version: 1.0.0
-message: "Cite as"
+cff-version: 1.0.1
 authors:
   - family-names: Nakano
     given-names: Yuichiro
