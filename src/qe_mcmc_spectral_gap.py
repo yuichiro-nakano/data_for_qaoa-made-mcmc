@@ -32,6 +32,12 @@ def main():
 	now = datetime.datetime.now()
 	datename = now.strftime('%Y-%m%d-%H%M-%S')
 
+	logging.basicConfig(level=logging.DEBUG,
+	                    format="%(message)s",
+	                    datefmt="[%X]",
+	                    handlers=[logging.FileHandler(filename="../log/{0}_log.txt".format(datename))])
+	logger = logging.getLogger(__name__)
+
 	# import instance sets
 	fname_in = pathlib.Path(source_dir_name).joinpath('{0}_sites_instance_set.pickle'.format(n_spin))
 	with open(str(fname_in), 'rb') as f:

@@ -5,10 +5,29 @@ os.environ["OMP_NUM_THREADS"] = "8"
 import numpy as np
 import scipy
 import torch
-#import lib.ising_model as ising
-#import lib.made as made
-import made as made
-import ising_model as ising
+import lib.ising_model as ising
+import lib.made as made
+#import made as made
+#import ising_model as ising
+
+# result
+class MCMCResult:
+	def __init__(self, num_chains, num_iters, num_spins):
+		self.data = np.zeros((num_chains, num_iters+1, num_spins), dtype=np.int8)
+		self.acceptance_history = np.zeros((num_chains, num_iters))
+		self.update_log = np.zeros((num_chains, num_iters))
+
+	def energy(self, instance: ising.Ising_model):
+		energy = np.zeros((self.data.shape[0], self.data.shape[1]))
+		for i,j in instance.J_index_list:
+			energy += instance.J[i,j] * self.data[:,:,[i,j]].prod(axis=2)
+		for i in range(instance.n_qubits):
+			energy += instance.h[i] * self.data[:,:,i]
+		return energy
+
+	def magnetization(self):
+		magnetization = np.average(self.data, axis=2)
+		return magnetization
 
 # spin
 def spin_to_number(spin):
@@ -60,11 +79,9 @@ def boltzmann_metropolis(spin, proposal_spin, instance, beta, rng=None):
 
 	# accept/reject propose
 	if acceptance >= rng.uniform(0,1):
-		count = 1
-		return proposal_spin, acceptance, count
+		return proposal_spin, acceptance, True
 	else:
-		count = 0
-		return spin, acceptance, count
+		return spin, acceptance, False
     
 def boltzmann_metropolis_hastings(spin, proposal_spin, proposal_log_prob, reverse_proposal_log_prob, instance, beta, rng=None):
 	if rng == None:
@@ -80,11 +97,9 @@ def boltzmann_metropolis_hastings(spin, proposal_spin, proposal_log_prob, revers
     
 	# accept/reject propose
 	if acceptance >= rng.uniform(0,1):
-		count = 1
-		return proposal_spin, acceptance, count
+		return proposal_spin, acceptance, True
 	else:
-		count = 0
-		return spin, acceptance, count
+		return spin, acceptance, False
 
 
 # proposal
@@ -107,24 +122,26 @@ def ssf_update_mcmc(init_spin, instance, beta, n_iter, rng=None):
 	state_history = np.zeros((n_iter+1, n_spin))
 	state_history[0] = init_spin
 	acceptance_history = np.zeros(n_iter)
+	update_log = np.zeros(n_iter)
 
-	accept_state = init_spin
+	current_state = init_spin
 
 	for i in range(n_iter):
 		# make a porposal
 		flip_index = rng.integers(0, n_spin)
-		proposal_state = single_spin_flip(accept_state, flip_index)
+		proposal_state = single_spin_flip(current_state, flip_index)
 
 		# accept or reject the proposal
-		next_state, acceptance, flag = boltzmann_metropolis(accept_state, proposal_state, instance, beta, rng)
+		next_state, acceptance, flag = boltzmann_metropolis(current_state, proposal_state, instance, beta, rng)
 
-		# update the accept_state
+		# update the current_state
 		state_history[i+1] = next_state
 		acceptance_history[i] = acceptance
+		update_log[i] = flag
 		if flag:
-			accept_state = next_state
+			current_state = next_state
 	
-	return state_history, acceptance_history
+	return state_history, acceptance_history, update_log
     
 def uniform_update_mcmc(init_spin, instance, beta, n_iter, rng=None):
 	if rng == None:
@@ -135,23 +152,25 @@ def uniform_update_mcmc(init_spin, instance, beta, n_iter, rng=None):
 	state_history = np.zeros((n_iter+1, n_spin))
 	state_history[0] = init_spin
 	acceptance_history = np.zeros(n_iter)
+	update_log = np.zeros(n_iter)
 
-	accept_state = init_spin
+	current_state = init_spin
 
 	for i in range(n_iter):
 		# make a porposal
 		proposal_state = number_to_spin(rng.integers(0, 2**n_spin), n_spin)
 
 		# accept or reject the proposal
-		next_state, acceptance, flag = boltzmann_metropolis(accept_state, proposal_state, instance, beta, rng)
+		next_state, acceptance, flag = boltzmann_metropolis(current_state, proposal_state, instance, beta, rng)
 
-		# update the accept_state
+		# update the current_state
 		state_history[i+1] = next_state
 		acceptance_history[i] = acceptance
+		update_log[i] = flag
 		if flag:
-			accept_state = next_state
+			current_state = next_state
 	
-	return state_history, acceptance_history
+	return state_history, acceptance_history, update_log
 
 def neural_update_mcmc(init_spin, instance, model, proposal_history, log_prob_history, beta, n_iter, rng=None):
 	if rng == None:
@@ -162,6 +181,7 @@ def neural_update_mcmc(init_spin, instance, model, proposal_history, log_prob_hi
 	state_history = np.zeros((n_iter+1, n_spin))
 	state_history[0] = init_spin
 	acceptance_history = np.zeros(n_iter)
+	update_log = np.zeros(n_iter)
 
 	current_state = init_spin
 	current_log_prob = made.compute_log_prob(model, made.spin_to_binary(init_spin))
@@ -170,14 +190,15 @@ def neural_update_mcmc(init_spin, instance, model, proposal_history, log_prob_hi
 		# accept or reject the proposal
 		next_state, acceptance, flag = boltzmann_metropolis_hastings(current_state, proposal_history[i], log_prob_history[i], current_log_prob, instance, beta, rng)
 
-		# update the accept_state
+		# update the current_state
 		state_history[i+1] = next_state
 		acceptance_history[i] = acceptance
+		update_log[i] = flag
 		if flag:
 			current_state = proposal_history[i]
 			current_log_prob = log_prob_history[i]
 	
-	return state_history, acceptance_history
+	return state_history, acceptance_history, update_log
 
 # utils
 def calc_boltzmann_mh_acceptance(energy_vector, proposal_mat, beta):

@@ -30,10 +30,12 @@ os.environ["MKL_NUM_THREADS"] = "8"
 os.environ["OMP_NUM_THREADS"] = "8"
 
 def main():
+	global qaoa_opt_para
 	start_time = time.time()
 
 	# import instance
-	fname_in = pathlib.Path(source_dir_name).joinpath('{0}_sites_instance_05.pickle'.format(n_spin))
+	#fname_in = pathlib.Path(source_dir_name).joinpath('{0}_sites_instance_0{1}.pickle'.format(n_spin, instance_idx))
+	fname_in = pathlib.Path(source_dir_name).joinpath('{0}_sites_instance.pickle'.format(n_spin)) # test instance
 	with open(str(fname_in), 'rb') as f:
 		instance = pickle.load(f)
 
@@ -51,12 +53,14 @@ def main():
 	else:
 		qaoa_para = qaoa_init_para
 
-	qaoa_opt = scipy.optimize.minimize(qaoa_cost, qaoa_para, method=qaoa_method, options=qaoa_options)
+	if qaoa_opt_para == None:
+		qaoa_opt = scipy.optimize.minimize(qaoa_cost, qaoa_para, method=qaoa_method, options=qaoa_options)
+		qaoa_opt_para = qaoa_opt.x
 
 	check_01_time = time.time()
 
     # sampling from QAOA distribution
-	qaoa_opt_data_idx = qaoa.sampling_QAOA(qaoa_ansatz, qaoa_opt.x, n_train+n_test) # optimize parameter
+	qaoa_opt_data_idx = qaoa.sampling_QAOA(qaoa_ansatz, qaoa_opt_para, n_train+n_test) # optimize parameter
 	qaoa_fix_data_idx = qaoa.sampling_QAOA(qaoa_ansatz, qaoa_init_para, n_train+n_test) # fixed angle
 
 	qaoa_opt_data_nd = np.array([qaoa.number_to_binary(qaoa_opt_data_idx[i], n_spin) for i in range(len(qaoa_opt_data_idx))], dtype='float32') # MADEモデルのコードが重み行列をfloat32で記述しているため、データもfloat32に明示的に指定する！
@@ -98,36 +102,70 @@ def main():
 	check_02_time = time.time()
 
 	# mcmc simulation
-	opt_qaoa_made_result = np.zeros((n_chain, n_step+1, n_spin), dtype=np.int8)
-	fix_qaoa_made_result = np.zeros((n_chain, n_step+1, n_spin), dtype=np.int8)
-	uniform_result = np.zeros((n_chain, n_step+1, n_spin), dtype=np.int8)
-	ssf_result = np.zeros((n_chain, n_step+1, n_spin), dtype=np.int8)
+	opt_qaoa_made_result = mcmc.MCMCResult(n_chain, n_step, n_spin)
+	fix_qaoa_made_result = mcmc.MCMCResult(n_chain, n_step, n_spin)
+	uniform_result = mcmc.MCMCResult(n_chain, n_step, n_spin)
+	ssf_result = mcmc.MCMCResult(n_chain, n_step, n_spin)
 
 	init_spin_idx_set = rng.choice(2**n_spin, n_chain, replace=False)
 	for k in range(n_chain):
 		init_spin = ising.number_to_spin(init_spin_idx_set[k], n_spin)
 
-		opt_qaoa_made_result[k] = mcmc.neural_update_mcmc(init_spin, instance, model_qaoa_opt, opt_qaoa_made_outputs_spin, opt_qaoa_made_log_prob, beta, n_step, rng)[0]
-		fix_qaoa_made_result[k] = mcmc.neural_update_mcmc(init_spin, instance, model_qaoa_fix, fix_qaoa_made_outputs_spin, fix_qaoa_made_log_prob, beta, n_step, rng)[0]
-		uniform_result[k] = mcmc.uniform_update_mcmc(init_spin, instance, beta, n_step, rng)[0]
-		ssf_result[k] = mcmc.ssf_update_mcmc(init_spin, instance, beta, n_step, rng)[0]
+		opt_qaoa_made_result.data[k], opt_qaoa_made_result.acceptance_history[k], opt_qaoa_made_result.update_log[k] = mcmc.neural_update_mcmc(init_spin, instance, model_qaoa_opt, opt_qaoa_made_outputs_spin, opt_qaoa_made_log_prob, beta, n_step, rng)
+		fix_qaoa_made_result.data[k], fix_qaoa_made_result.acceptance_history[k], fix_qaoa_made_result.update_log[k] = mcmc.neural_update_mcmc(init_spin, instance, model_qaoa_fix, fix_qaoa_made_outputs_spin, fix_qaoa_made_log_prob, beta, n_step, rng)
+		uniform_result.data[k], uniform_result.acceptance_history[k], uniform_result.update_log[k] = mcmc.uniform_update_mcmc(init_spin, instance, beta, n_step, rng)
+		ssf_result.data[k], ssf_result.acceptance_history[k], ssf_result.update_log[k] = mcmc.ssf_update_mcmc(init_spin, instance, beta, n_step, rng)
 
 	end_time = time.time()
 
 	# export results
-	sub_folder_name = "{0}_sites_result_05".format(n_spin)
+	#sub_folder_name = "{0}_sites_result_0{1}".format(n_spin, instance_idx)
+	sub_folder_name = "{0}_sites_result".format(n_spin) # 5-qubit test
 	sub_folder_path = pathlib.Path(result_dir_name).joinpath(sub_folder_name)
 	if not os.path.exists(str(sub_folder_path)):
 		os.makedirs(str(sub_folder_path))
 
-	fname_out_0 = pathlib.Path(result_dir_name).joinpath(sub_folder_name, 'opt_qaoa_made_result.npy')
-	np.save(str(fname_out_0), opt_qaoa_made_result)
-	fname_out_1 = pathlib.Path(result_dir_name).joinpath(sub_folder_name, 'fix_qaoa_made_result.npy')
-	np.save(str(fname_out_1), fix_qaoa_made_result)
-	fname_out_2 = pathlib.Path(result_dir_name).joinpath(sub_folder_name, 'uniform_result.npy')
-	np.save(str(fname_out_2), uniform_result)
-	fname_out_3 = pathlib.Path(result_dir_name).joinpath(sub_folder_name, 'ssf_result.npy')
-	np.save(str(fname_out_3), ssf_result)
+	subsub_folder_name_0 = 'sample'
+	subsub_folder_path_0 = sub_folder_path.joinpath(subsub_folder_name_0)
+	if not os.path.exists(str(subsub_folder_path_0)):
+		os.makedirs(str(subsub_folder_path_0))
+
+	fname_out_0_0 = sub_folder_path.joinpath(subsub_folder_name_0, 'opt_qaoa_made_sample.npy')
+	np.save(str(fname_out_0_0), opt_qaoa_made_result.data)
+	fname_out_0_1 = sub_folder_path.joinpath(subsub_folder_name_0, 'fix_qaoa_made_sample.npy')
+	np.save(str(fname_out_0_1), fix_qaoa_made_result.data)
+	fname_out_0_2 = sub_folder_path.joinpath(subsub_folder_name_0, 'uniform_sample.npy')
+	np.save(str(fname_out_0_2), uniform_result.data)
+	fname_out_0_3 = sub_folder_path.joinpath(subsub_folder_name_0, 'ssf_sample.npy')
+	np.save(str(fname_out_0_3), ssf_result.data)
+
+	subsub_folder_name_1 = 'acceptance_history'
+	subsub_folder_path_1 = sub_folder_path.joinpath(subsub_folder_name_1)
+	if not os.path.exists(str(subsub_folder_path_1)):
+		os.makedirs(str(subsub_folder_path_1))
+
+	fname_out_1_0 = sub_folder_path.joinpath(subsub_folder_name_1, 'opt_qaoa_made_acceptance_history.npy')
+	np.save(str(fname_out_1_0), opt_qaoa_made_result.acceptance_history)
+	fname_out_1_1 = sub_folder_path.joinpath(subsub_folder_name_1, 'fix_qaoa_made_acceptance_history.npy')
+	np.save(str(fname_out_1_1), fix_qaoa_made_result.acceptance_history)
+	fname_out_1_2 = sub_folder_path.joinpath(subsub_folder_name_1, 'uniform_acceptance_history.npy')
+	np.save(str(fname_out_1_2), uniform_result.acceptance_history)
+	fname_out_1_3 = sub_folder_path.joinpath(subsub_folder_name_1, 'ssf_acceptance_history.npy')
+	np.save(str(fname_out_1_3), ssf_result.acceptance_history)
+ 
+	subsub_folder_name_2 = 'update_log'
+	subsub_folder_path_2 = sub_folder_path.joinpath(subsub_folder_name_2)
+	if not os.path.exists(str(subsub_folder_path_2)):
+		os.makedirs(str(subsub_folder_path_2))
+
+	fname_out_2_0 = sub_folder_path.joinpath(subsub_folder_name_2, 'opt_qaoa_made_update_log.npy')
+	np.save(str(fname_out_2_0), opt_qaoa_made_result.update_log)
+	fname_out_2_1 = sub_folder_path.joinpath(subsub_folder_name_2, 'fix_qaoa_made_update_log.npy')
+	np.save(str(fname_out_2_1), fix_qaoa_made_result.update_log)
+	fname_out_2_2 = sub_folder_path.joinpath(subsub_folder_name_2, 'uniform_update_log.npy')
+	np.save(str(fname_out_2_2), uniform_result.update_log)
+	fname_out_2_3 = sub_folder_path.joinpath(subsub_folder_name_2, 'ssf_update_log.npy')
+	np.save(str(fname_out_2_3), ssf_result.update_log)
         
 	path_config = sub_folder_path.joinpath(datename+'_runtime.txt')
 	with open(str(path_config), mode='w') as f:
@@ -145,7 +183,7 @@ def main():
 		f.write("batchsize : {0}\n".format(batchsize))
 		f.write("n_epochs : {0}\n".format(n_epochs))
 		f.write("======\n")
-		f.write("QAOA opt parameter : {0}\n".format(qaoa_opt.x))
+		f.write("QAOA opt parameter : {0}\n".format(qaoa_opt_para))
 
 if __name__ == '__main__':
 	# seed
@@ -156,17 +194,20 @@ if __name__ == '__main__':
 
 	# instance
 	source_dir_name = '../data'
-	n_spin = 25
+	n_spin = 15
 	beta = 5.0
+	#instance_idx = 5
 
 	# QAOA
 	n_layers = 5
 	qaoa_init_para = [0.2705, -0.5899, 0.4803, -0.4492, 0.5074, -0.3559, 0.5646, -0.2643, 0.6397, -0.1291] #文献におけるSKmodelに対するQAOA(p=5)の固定角
+	#qaoa_opt_para = [0.53125339, -1.23453867, 0.93431409, -0.99657104, 0.97544025, -0.79834696, 1.08140715, -0.59474502, 1.20881303, -0.31104715] # 25-qubits
+	qaoa_opt_para = None
 	qaoa_method = "BFGS"
 	qaoa_options = {"disp": False, "maxiter": 200, "gtol": 1e-6}
 
 	# MADE
-	n_train = 8000
+	n_train = 1000
 	n_test = int(n_train * 0.25)
 	hidden_size = int(2 * n_spin)
 	hidden_layers = 2

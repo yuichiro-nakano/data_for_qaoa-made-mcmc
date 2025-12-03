@@ -10,8 +10,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.distributions import Bernoulli
 
-#import lib.ising_model as ising
-import ising_model as ising
+import lib.ising_model as ising
+#import ising_model as ising
 
 # ------------------------------------------------------------------------------
 
