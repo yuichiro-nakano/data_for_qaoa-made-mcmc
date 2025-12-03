@@ -1,0 +1,5 @@
+total time [s] : 26.706461906433105
+======
+QAOA optimization [s] : 0.43498897552490234
+MADE training & sampling [s] : 7.2070300579071045
+MCMC simulation [s] : 19.0644428730011
