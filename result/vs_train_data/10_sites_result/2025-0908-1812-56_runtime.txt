@@ -1,0 +1,11 @@
+total time [s] : 2214.201956987381
+======
+beta : 5.0
+n_step : 10000
+======
+training data size : [5, 10, 15, 20, 25, 30, 40, 50, 100, 200, 500, 1000, 5000, 10000]
+hidden_size : 20
+hidden_layers : 2
+lr : 0.005
+batchsize : 8
+n_epochs : 30
